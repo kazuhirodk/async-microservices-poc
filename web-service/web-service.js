@@ -48,7 +48,6 @@ function publishToChannel(channel, { routingKey, exchangeName, data }) {
   });
 }
 
-
 async function listenForResults() {
   // connect to Rabbit MQ
   let connection = await amqp.connect(messageQueueConnectionString);
@@ -60,7 +59,6 @@ async function listenForResults() {
   // start consuming messages
   await consume({ connection, channel });
 }
-
 
 // consume messages from RabbitMQ
 function consume({ connection, channel, resultsChannel }) {
