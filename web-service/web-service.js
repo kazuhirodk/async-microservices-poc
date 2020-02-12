@@ -16,8 +16,8 @@ let lastRequestId = 1;
 // RabbitMQ connection string
 const messageQueueConnectionString = process.env.CLOUDAMQP_URL;
 
-// handle the request
-app.post('/api/v1/processData', async function (req, res) {
+// Paid seat operation
+app.post('/api/paidSeat', async function (req, res) {
   // save request id and increment
   let requestId = lastRequestId;
   lastRequestId++;
@@ -27,9 +27,56 @@ app.post('/api/v1/processData', async function (req, res) {
   let channel = await connection.createConfirmChannel();
 
   // publish the data to Rabbit MQ
-  let requestData = req.body.data;
-  console.log("Published a request message, requestId:", requestId);
-  await publishToChannel(channel, { routingKey: "request", exchangeName: "processing", data: { requestId, requestData } });
+  let seatsBalanceId = req.body.seatsBalanceId;
+  let operation = 'paid'
+
+  console.log("Published a request message, requestId:", requestId, ', with operation:', operation);
+
+  await publishToChannel(channel, { routingKey: "request", exchangeName: "processing", data: { requestId, seatsBalanceId, operation } });
+
+  // send the request id in the response
+  res.send({ requestId })
+});
+
+// Recover seat operation
+app.post('/api/recoverSeat', async function (req, res) {
+  // save request id and increment
+  let requestId = lastRequestId;
+  lastRequestId++;
+
+  // connect to Rabbit MQ and create a channel
+  let connection = await amqp.connect(messageQueueConnectionString);
+  let channel = await connection.createConfirmChannel();
+
+  // publish the data to Rabbit MQ
+  let seatsBalanceId = req.body.seatsBalanceId;
+  let operation = 'recover'
+
+  console.log("Published a request message, requestId:", requestId, ', with operation:', operation);
+
+  await publishToChannel(channel, { routingKey: "request", exchangeName: "processing", data: { requestId, seatsBalanceId, operation } });
+
+  // send the request id in the response
+  res.send({ requestId })
+});
+
+// Reserve seat operation
+app.post('/api/reserveSeat', async function (req, res) {
+  // save request id and increment
+  let requestId = lastRequestId;
+  lastRequestId++;
+
+  // connect to Rabbit MQ and create a channel
+  let connection = await amqp.connect(messageQueueConnectionString);
+  let channel = await connection.createConfirmChannel();
+
+  // publish the data to Rabbit MQ
+  let seatsBalanceId = req.body.seatsBalanceId;
+  let operation = 'reserve'
+
+  console.log("Published a request message, requestId:", requestId, ', with operation:', operation);
+
+  await publishToChannel(channel, { routingKey: "request", exchangeName: "processing", data: { requestId, seatsBalanceId, operation } });
 
   // send the request id in the response
   res.send({ requestId })

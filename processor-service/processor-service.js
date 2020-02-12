@@ -1,4 +1,5 @@
 const path  = require('path');
+const { pool } = require('../config');
 require('dotenv').config({path:  path.resolve(process.cwd(), '../.env')});
 
 const amqp = require('amqplib');
@@ -42,11 +43,12 @@ function consume({ connection, channel, resultsChannel }) {
       let msgBody = msg.content.toString();
       let data = JSON.parse(msgBody);
       let requestId = data.requestId;
-      let requestData = data.requestData;
+      let seatsBalanceId = data.seatsBalanceId;
+
       console.log("Received a request message, requestId:", requestId);
 
       // process data
-      let processingResults = await processMessage(requestData);
+      let processingResults = await processMessage(seatsBalanceId);
 
       // publish results to channel
       await publishToChannel(resultsChannel, {
@@ -72,13 +74,24 @@ function consume({ connection, channel, resultsChannel }) {
   });
 }
 
-// simulate data processing that takes 5 seconds
-function processMessage(requestData) {
+function processMessage(seatsBalanceId) {
   return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      resolve(requestData + "-processed")
-    }, 5000);
+    resolve(paidSeat(seatsBalanceId));
   });
+}
+
+// paid seat operation
+function paidSeat(seatsBalanceId) {
+  return new Promise((resolve, reject) => {
+    pool.query('UPDATE seats_balance SET paid_seats = paid_seats + 1, reserved_seats = reserved_seats + 1, available_seats = available_seats - 1 WHERE id = $1', [seatsBalanceId], error => {
+      if (error) {
+        console.log(error);
+        resolve(`Error for request of payment for Seats balance id: ${seatsBalanceId}`);
+      }
+      console.log(`Seats balance of id ${seatsBalanceId} was successfully paid`);
+      resolve(`Seats balance of id ${seatsBalanceId} was successfully paid`);
+    })
+  })
 }
 
 listenForMessages();
