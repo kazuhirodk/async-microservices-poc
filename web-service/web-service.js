@@ -38,8 +38,8 @@ app.post('/api/paidSeat', async function (req, res) {
   res.send({ requestId })
 });
 
-// Recover seat operation
-app.post('/api/recoverSeat', async function (req, res) {
+// Refund seat operation
+app.post('/api/refundSeat', async function (req, res) {
   // save request id and increment
   let requestId = lastRequestId;
   lastRequestId++;
@@ -50,7 +50,7 @@ app.post('/api/recoverSeat', async function (req, res) {
 
   // publish the data to Rabbit MQ
   let seatsBalanceId = req.body.seatsBalanceId;
-  let operation = 'recover'
+  let operation = 'refund'
 
   console.log("Published a request message, requestId:", requestId, ', with operation:', operation);
 
@@ -73,6 +73,28 @@ app.post('/api/reserveSeat', async function (req, res) {
   // publish the data to Rabbit MQ
   let seatsBalanceId = req.body.seatsBalanceId;
   let operation = 'reserve'
+
+  console.log("Published a request message, requestId:", requestId, ', with operation:', operation);
+
+  await publishToChannel(channel, { routingKey: "request", exchangeName: "processing", data: { requestId, seatsBalanceId, operation } });
+
+  // send the request id in the response
+  res.send({ requestId })
+});
+
+// Return reserved seat seat operation
+app.post('/api/returnReservedSeat', async function (req, res) {
+  // save request id and increment
+  let requestId = lastRequestId;
+  lastRequestId++;
+
+  // connect to Rabbit MQ and create a channel
+  let connection = await amqp.connect(messageQueueConnectionString);
+  let channel = await connection.createConfirmChannel();
+
+  // publish the data to Rabbit MQ
+  let seatsBalanceId = req.body.seatsBalanceId;
+  let operation = 'return'
 
   console.log("Published a request message, requestId:", requestId, ', with operation:', operation);
 

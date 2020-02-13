@@ -43,12 +43,11 @@ function consume({ connection, channel, resultsChannel }) {
       let msgBody = msg.content.toString();
       let data = JSON.parse(msgBody);
       let requestId = data.requestId;
-      let seatsBalanceId = data.seatsBalanceId;
 
       console.log("Received a request message, requestId:", requestId);
 
       // process data
-      let processingResults = await processMessage(seatsBalanceId);
+      let processingResults = await processMessage(data);
 
       // publish results to channel
       await publishToChannel(resultsChannel, {
@@ -74,9 +73,26 @@ function consume({ connection, channel, resultsChannel }) {
   });
 }
 
-function processMessage(seatsBalanceId) {
+function processMessage(data) {
+  let { seatsBalanceId, operation } = data;
+
   return new Promise((resolve, reject) => {
-    resolve(paidSeat(seatsBalanceId));
+    switch(operation) {
+      case 'paid':
+        resolve(paidSeat(seatsBalanceId));
+        break;
+      case 'refund':
+        resolve(refundSeat(seatsBalanceId));
+        break;
+      case 'reserve':
+        resolve(reserveSeat(seatsBalanceId));
+        break;
+      case 'return':
+        resolve(returnReservedSeat(seatsBalanceId));
+        break;
+      default:
+        resolve('Wrong operation');
+    }
   });
 }
 
@@ -86,10 +102,48 @@ function paidSeat(seatsBalanceId) {
     pool.query('UPDATE seats_balance SET paid_seats = paid_seats + 1, reserved_seats = reserved_seats + 1, available_seats = available_seats - 1 WHERE id = $1', [seatsBalanceId], error => {
       if (error) {
         console.log(error);
-        resolve(`Error for request of payment for Seats balance id: ${seatsBalanceId}`);
       }
-      console.log(`Seats balance of id ${seatsBalanceId} was successfully paid`);
+
       resolve(`Seats balance of id ${seatsBalanceId} was successfully paid`);
+    })
+  })
+}
+
+// refund seat operation
+function refundSeat(seatsBalanceId) {
+  return new Promise((resolve, reject) => {
+    pool.query('UPDATE seats_balance SET paid_seats = paid_seats - 1, reserved_seats = reserved_seats - 1, available_seats = available_seats + 1 WHERE id = $1', [seatsBalanceId], error => {
+      if (error) {
+        resolve(`Error for request of refund for Seats balance id: ${seatsBalanceId}`);
+      }
+
+      resolve(`Seats balance of id ${seatsBalanceId} was successfully refunded`);
+    })
+  })
+}
+
+// Reserve seat operation
+function reserveSeat(seatsBalanceId) {
+  return new Promise((resolve, reject) => {
+    pool.query('UPDATE seats_balance SET reserved_seats = reserved_seats + 1, available_seats = available_seats - 1 WHERE id = $1', [seatsBalanceId], error => {
+      if (error) {
+        resolve(`Error for request of reserve for Seats balance id: ${seatsBalanceId}`);
+      }
+
+      resolve(`Seats balance of id ${seatsBalanceId} was successfully reserved`);
+    })
+  })
+}
+
+// Return reserved seat operation
+function returnReservedSeat(seatsBalanceId) {
+  return new Promise((resolve, reject) => {
+    pool.query('UPDATE seats_balance SET reserved_seats = reserved_seats - 1, available_seats = available_seats + 1 WHERE id = $1', [seatsBalanceId], error => {
+      if (error) {
+        resolve(`Error for request of return a reserved seat for Seats balance id: ${seatsBalanceId}`);
+      }
+
+      resolve(`Seats balance of id ${seatsBalanceId} was successfully returned a seat`);
     })
   })
 }
