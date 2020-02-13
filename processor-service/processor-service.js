@@ -117,7 +117,9 @@ function refundSeat(seatsBalanceId) {
         resolve(`Error for request of refund for Seats balance id: ${seatsBalanceId}`);
       }
 
-      resolve(`Seats balance of id ${seatsBalanceId} was successfully refunded`);
+      setTimeout(() => {
+        resolve(`Seats balance of id ${seatsBalanceId} was successfully refunded`);
+      }, 5000);
     })
   })
 }
